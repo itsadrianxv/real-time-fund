@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ANNOUNCEMENT_KEY = 'hasClosedAnnouncement_v12';
@@ -24,6 +24,7 @@ export default function Announcement() {
     <AnimatePresence>
       {isVisible && (
         <motion.div
+          className="announcement-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -34,53 +35,36 @@ export default function Announcement() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(4px)',
-            padding: '20px',
+            padding: '16px'
           }}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            className="glass"
-            style={{
-              width: '100%',
-              maxWidth: '400px',
-              padding: '24px',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              maxHeight: 'calc(100dvh - 40px)',
-              overflow: 'hidden',
-            }}
+            className="announcement-shell"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.18 }}
           >
-            <div className="title" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700, fontSize: '18px', color: 'var(--accent)' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            <h2 className="announcement-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
               </svg>
-              <span>公告</span>
-            </div>
-            <div style={{ color: 'var(--text)', lineHeight: '1.6', fontSize: '15px', overflowY: 'auto', minHeight: 0, flex: 1, paddingRight: '4px' }}>
-              <p>v0.2.1 版本更新内容如下：</p>
-              <p>1. 改进拍照识别基金准确度。</p>
-              <p>2. 拍照导入支持选择分组，识别持仓金额、持仓收益。</p>
-              <p>3. 个性化设置新增展示完整基金名称。</p>
-              <p>4. 表格列新增估算收益(估值涨幅+持有收益涨幅)。</p>
-              以下功能将会在下一个版本上线：
-              <p>1. 大盘走势数据。</p>
-              <p>2. 关联板块。</p>
+              <span>版本说明</span>
+            </h2>
+
+            <div className="announcement-body">
+              <p>v0.2.1 继续围绕实际记账和盯盘场景打磨体验，当前重点如下：</p>
+              <p>1. 改进拍照识别基金的准确度。</p>
+              <p>2. 扫描导入支持选择分组，并补充持仓金额与收益信息。</p>
+              <p>3. 个性化设置新增完整基金名称展示。</p>
+              <p>4. 列表补充估算收益、估值涨幅与持有收益涨幅。</p>
+              <p>下一步计划继续完善大盘走势与关联板块能力。</p>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-              <button 
-                className="button" 
-                onClick={handleClose}
-                style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center' }}
-              >
+            <div className="announcement-actions">
+              <button className="button" onClick={handleClose}>
                 我知道了
               </button>
             </div>

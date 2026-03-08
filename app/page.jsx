@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo, useLayoutEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createWorker } from 'tesseract.js';
 import { createAvatar } from '@dicebear/core';
 import { identicon } from '@dicebear/collection';
@@ -68,6 +69,21 @@ dayjs.tz.setDefault(TZ);
 const nowInTz = () => dayjs().tz(TZ);
 const toTz = (input) => (input ? dayjs.tz(input, TZ) : nowInTz());
 const formatDate = (input) => toTz(input).format('YYYY-MM-DD');
+const formatCurrency = (value, { signed = false } = {}) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return '--';
+  const amount = Math.abs(numericValue).toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  const sign = signed ? (numericValue > 0 ? '+' : numericValue < 0 ? '-' : '') : '';
+  return `${sign}¥${amount}`;
+};
+const formatPercent = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return '--';
+  return `${numericValue > 0 ? '+' : numericValue < 0 ? '-' : ''}${Math.abs(numericValue).toFixed(2)}%`;
+};
 
 function ScanButton({ onClick, disabled }) {
   return (
@@ -746,6 +762,48 @@ export default function HomePage() {
   );
 
   // PC 端表格数据（用于 PcFundTable）
+  const workspaceSummary = useMemo(() => {
+    let totalAmount = 0;
+    let totalToday = 0;
+    let totalProfit = 0;
+    let trackedHoldingCount = 0;
+    const averageChanges = [];
+
+    displayFunds.forEach((fund) => {
+      const holding = holdings[fund.code];
+      if (holding && Number(holding.share) > 0) {
+        trackedHoldingCount += 1;
+      }
+
+      const profit = getHoldingProfit(fund, holding);
+      if (profit?.amount != null) totalAmount += profit.amount;
+      if (profit?.profitToday != null) totalToday += profit.profitToday;
+      if (profit?.profitTotal != null) totalProfit += profit.profitTotal;
+
+      const rawChange = fund.estPricedCoverage > 0.05
+        ? fund.estGszzl
+        : (isNumber(fund.gszzl) ? fund.gszzl : fund.zzl);
+      if (isNumber(rawChange)) {
+        averageChanges.push(Number(rawChange));
+      }
+    });
+
+    const averageChange = averageChanges.length
+      ? averageChanges.reduce((sum, value) => sum + value, 0) / averageChanges.length
+      : null;
+
+    return {
+      trackedHoldingCount,
+      totalAmount,
+      totalToday,
+      totalProfit,
+      averageChange,
+      lastSyncLabel: lastSyncTime ? dayjs(lastSyncTime).format('MM-DD HH:mm') : '未同步',
+      refreshLabel: `${Math.round(refreshMs / 1000)} 秒`,
+      tradingLabel: isTradingDay ? '交易日' : '非交易日'
+    };
+  }, [displayFunds, getHoldingProfit, holdings, isTradingDay, lastSyncTime, refreshMs]);
+
   const pcFundTableData = useMemo(
     () =>
       displayFunds.map((f) => {
@@ -3886,6 +3944,14 @@ export default function HomePage() {
                         </div>
                       </div>
                       <div className="user-menu-divider" />
+                      <Link
+                        className="user-menu-item"
+                        href="/alert-config"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <SettingsIcon width="16" height="16" />
+                        <span>告警配置</span>
+                      </Link>
                       <button
                         className="user-menu-item"
                         onClick={() => {
@@ -3909,6 +3975,14 @@ export default function HomePage() {
                     </>
                   ) : (
                     <>
+                      <Link
+                        className="user-menu-item"
+                        href="/alert-config"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <SettingsIcon width="16" height="16" />
+                        <span>告警配置</span>
+                      </Link>
                       <button
                         className="user-menu-item"
                         onClick={handleOpenLogin}
@@ -3934,6 +4008,57 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      <section className="workspace-summary card">
+        <div className="workspace-head">
+          <div>
+            <h1 className="workspace-title">{getGroupName()}</h1>
+            <p className="workspace-copy">
+              当前分组、持仓与刷新状态都收在这里，下面直接进入筛选、排序和估值判断。
+            </p>
+          </div>
+
+          <div className="workspace-meta">
+            <span>{displayFunds.length} 支基金</span>
+            <span>{workspaceSummary.trackedHoldingCount} 支已录入持仓</span>
+            <span>{workspaceSummary.tradingLabel}</span>
+            <span>刷新 {workspaceSummary.refreshLabel}</span>
+            <span>同步 {workspaceSummary.lastSyncLabel}</span>
+          </div>
+
+          <div className="workspace-actions">
+            <Link className="button secondary" href="/alert-config">
+              告警配置
+            </Link>
+            <button className="button secondary" type="button" onClick={() => setSettingsOpen(true)}>
+              偏好设置
+            </button>
+          </div>
+        </div>
+
+        <dl className="workspace-metrics">
+          <div className="workspace-metric">
+            <dt>跟踪基金</dt>
+            <dd>{displayFunds.length}</dd>
+          </div>
+          <div className="workspace-metric">
+            <dt>持仓市值</dt>
+            <dd>{workspaceSummary.totalAmount > 0 ? formatCurrency(workspaceSummary.totalAmount) : '--'}</dd>
+          </div>
+          <div className="workspace-metric">
+            <dt>当日收益</dt>
+            <dd className={workspaceSummary.totalToday > 0 ? 'up' : workspaceSummary.totalToday < 0 ? 'down' : ''}>
+              {workspaceSummary.trackedHoldingCount ? formatCurrency(workspaceSummary.totalToday, { signed: true }) : '--'}
+            </dd>
+          </div>
+          <div className="workspace-metric">
+            <dt>平均涨跌</dt>
+            <dd className={workspaceSummary.averageChange > 0 ? 'up' : workspaceSummary.averageChange < 0 ? 'down' : ''}>
+              {workspaceSummary.averageChange != null ? formatPercent(workspaceSummary.averageChange) : '--'}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <div className="grid">
         <div className="col-12">
@@ -4019,7 +4144,7 @@ export default function HomePage() {
                 <button
                   className={`icon-button ${viewMode === 'card' ? 'active' : ''}`}
                   onClick={() => { applyViewMode('card'); }}
-                  style={{ border: 'none', width: '32px', height: '32px', background: viewMode === 'card' ? 'var(--primary)' : 'transparent', color: viewMode === 'card' ? '#05263b' : 'var(--muted)' }}
+                  style={{ border: 'none', width: '32px', height: '32px', background: viewMode === 'card' ? 'var(--text)' : 'transparent', color: viewMode === 'card' ? 'var(--bg)' : 'var(--muted)' }}
                   title="卡片视图"
                 >
                   <GridIcon width="16" height="16" />
@@ -4027,7 +4152,7 @@ export default function HomePage() {
                 <button
                   className={`icon-button ${viewMode === 'list' ? 'active' : ''}`}
                   onClick={() => { applyViewMode('list'); }}
-                  style={{ border: 'none', width: '32px', height: '32px', background: viewMode === 'list' ? 'var(--primary)' : 'transparent', color: viewMode === 'list' ? '#05263b' : 'var(--muted)' }}
+                  style={{ border: 'none', width: '32px', height: '32px', background: viewMode === 'list' ? 'var(--text)' : 'transparent', color: viewMode === 'list' ? 'var(--bg)' : 'var(--muted)' }}
                   title="表格视图"
                 >
                   <ListIcon width="16" height="16" />

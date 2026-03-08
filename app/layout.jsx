@@ -3,8 +3,8 @@ import AnalyticsGate from './components/AnalyticsGate';
 import packageJson from '../package.json';
 
 export const metadata = {
-  title: `基估宝 V${packageJson.version}`,
-  description: '输入基金编号添加基金，实时显示估值与前10重仓'
+  title: `基金估值 V${packageJson.version}`,
+  description: '输入基金代码即可查看实时估值、收益表现与持仓变化。'
 };
 
 export default function RootLayout({ children }) {
@@ -12,24 +12,23 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-    <head>
-      <meta name="apple-mobile-web-app-title" content="基估宝" />
-      <meta name="apple-mobile-web-app-capable" content="yes"/>
-      <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-      <link rel="apple-touch-icon" href="/Icon-60@3x.png?v=1"/>
-      <link rel="apple-touch-icon" sizes="180x180" href="/Icon-60@3x.png?v=1"/>
-      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-      {/* 尽早设置 data-theme，减少首屏主题闪烁；与 suppressHydrationWarning 配合避免服务端/客户端 html 属性不一致报错 */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`,
-        }}
-      />
-    </head>
-    <body>
-    <AnalyticsGate GA_ID={GA_ID} />
-    {children}
-    </body>
+      <head>
+        <meta name="apple-mobile-web-app-title" content="基金估值" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" href="/Icon-60@3x.png?v=1" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/Icon-60@3x.png?v=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body>
+        <AnalyticsGate GA_ID={GA_ID} />
+        {children}
+      </body>
     </html>
   );
 }

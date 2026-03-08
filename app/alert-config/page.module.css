@@ -1,0 +1,312 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 12px;
+  padding-bottom: 28px;
+}
+
+.headerCard {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+}
+
+.headerMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: clamp(2rem, 3.4vw, 2.8rem);
+  line-height: 1;
+}
+
+.pageIntro {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.metricRail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-3);
+}
+
+.metricItem {
+  margin: 0;
+  padding: 14px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.metricItem:last-child {
+  border-right: none;
+}
+
+.metricItem dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.metricItem dd {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+  align-self: flex-start;
+}
+
+.editorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sectionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.sectionHint {
+  margin: 6px 0 0;
+  max-width: 54ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.sectionMeta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gridThree {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.field > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.checkboxField input {
+  margin: 0;
+}
+
+.textarea {
+  min-height: 160px;
+  width: 100%;
+  resize: vertical;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.formActions {
+  display: flex;
+  gap: 10px;
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-3);
+}
+
+.table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.table th {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.codeCell {
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.actionCell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.emptyCell {
+  text-align: center !important;
+  color: var(--muted);
+  padding: 24px 14px !important;
+}
+
+.errorBox,
+.successBox {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.errorBox {
+  border: 1px solid rgba(194, 78, 71, 0.32);
+  background: rgba(194, 78, 71, 0.12);
+  color: var(--danger);
+}
+
+.successBox {
+  border: 1px solid rgba(31, 139, 92, 0.28);
+  background: rgba(31, 139, 92, 0.12);
+  color: var(--success);
+}
+
+@media (max-width: 1200px) {
+  .editorGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .metricRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metricItem:nth-child(2n) {
+    border-right: none;
+  }
+
+  .metricItem:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .gridThree {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .headerCard,
+  .sectionHead {
+    flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .gridTwo,
+  .gridThree {
+    grid-template-columns: 1fr;
+  }
+
+  .formActions,
+  .actionCell {
+    flex-direction: column;
+  }
+
+  .sectionMeta {
+    white-space: normal;
+  }
+}
