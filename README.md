@@ -93,30 +93,33 @@
 ```bash
 npm run build
 ```
-静态文件将生成在 `out` 目录下。
+服务端构建产物将生成在 `.next` 目录下。
 
 ### Docker运行
 
-需先配置环境变量（与本地开发一致），否则构建出的镜像中 Supabase 等配置为空。可复制 `env.example` 为 `.env` 并填入实际值；若不用登录/反馈功能可留空。
+所有 Docker 部署文件已集中到根目录下的 `deploy/`。推荐直接使用 `docker compose` 启动 `web`、`worker`、`postgres` 3 个容器。
 
-1. 构建镜像（构建时会读取当前环境或同目录 `.env` 中的变量）
+1. 准备部署环境变量
 ```bash
-docker build -t real-time-fund .
-# 或通过 --build-arg 传入，例如：
-# docker build -t real-time-fund --build-arg NEXT_PUBLIC_Supabase_URL=xxx --build-arg NEXT_PUBLIC_Supabase_ANON_KEY=xxx --build-arg NEXT_PUBLIC_GA_ID=G-xxxx .
+cd deploy
+cp .env.example .env
+# 按需编辑 deploy/.env
 ```
 
-2. 启动容器
+2. 启动 3 个容器
 ```bash
-docker run -d -p 3000:3000 --name fund real-time-fund
+docker compose up -d --build
 ```
 
-#### docker-compose（会读取同目录 `.env` 作为 build-arg 与运行环境）
+3. 停止并清理
 ```bash
-# 建议先：cp env.example .env 并编辑 .env
-docker compose up -d
+docker compose down
 ```
 
+如需手动构建镜像，可在项目根目录执行：
+```bash
+docker build -f deploy/Dockerfile -t real-time-fund .
+```
 ## 📖 使用说明
 
 1. **添加基金**：在顶部输入框输入 6 位基金代码（如 `110022`），点击“添加”。
