@@ -56,7 +56,7 @@ const requestJson = async (url, options = {}) => {
   }
 
   if (!response.ok || !body?.ok) {
-    throw new Error(body?.error || `request failed (${response.status})`);
+    throw new Error(body?.error || `请求失败（${response.status}）`);
   }
 
   return body.data;
@@ -65,7 +65,7 @@ const requestJson = async (url, options = {}) => {
 const parseNumber = (value, key) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
-    throw new Error(`${key} must be a number`);
+    throw new Error(`${key} 必须是数字`);
   }
   return parsed;
 };
@@ -73,11 +73,11 @@ const parseNumber = (value, key) => {
 const parseTime = (value, key) => {
   const text = String(value || '').trim();
   if (!/^\d{2}:\d{2}$/.test(text)) {
-    throw new Error(`${key} must use HH:mm`);
+    throw new Error(`${key} 必须使用 HH:mm 格式`);
   }
   const [hour, minute] = text.split(':').map(Number);
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-    throw new Error(`${key} is not a valid time`);
+    throw new Error(`${key} 不是有效时间`);
   }
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
@@ -97,11 +97,11 @@ const buildStrategyParams = (form) => {
   const eps_diff_std_mul = parseNumber(form.eps_diff_std_mul, 'eps_diff_std_mul');
 
   if (macd_fast <= 0 || macd_slow <= 0 || macd_signal <= 0) {
-    throw new Error('MACD params must be greater than 0');
+    throw new Error('MACD 参数必须大于 0');
   }
 
   if (min_sep_15m < 0 || min_sep_30m < 0 || min_sep_60m < 0) {
-    throw new Error('min_sep_bars cannot be less than 0');
+    throw new Error('最小间隔 K 线数量不能小于 0');
   }
 
   return {
@@ -174,7 +174,7 @@ export default function AlertConfigPage() {
   const [error, setError] = useState('');
 
   const strategyOptions = useMemo(
-    () => strategies.map((item) => ({ id: item.id, label: `${item.name}${item.enabled ? '' : ' (閸嬫粎鏁?'}` })),
+    () => strategies.map((item) => ({ id: item.id, label: `${item.name}${item.enabled ? '' : '（已停用）'}` })),
     [strategies]
   );
 
@@ -224,7 +224,7 @@ export default function AlertConfigPage() {
       };
 
       if (!payload.name) {
-        throw new Error('Strategy name is required');
+        throw new Error('策略名称不能为空');
       }
 
       if (strategyForm.id) {
@@ -232,13 +232,13 @@ export default function AlertConfigPage() {
           method: 'PUT',
           body: JSON.stringify(payload)
         });
-        setMessage('Strategy updated');
+        setMessage('策略模板已更新');
       } else {
         await requestJson('/api/alert/strategy-profiles', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
-        setMessage('Strategy created');
+        setMessage('策略模板已创建');
       }
 
       resetStrategyForm();
@@ -251,7 +251,7 @@ export default function AlertConfigPage() {
   };
 
   const deleteStrategy = async (id) => {
-    if (!window.confirm('Delete this strategy? Bound funds will fall back to default params.')) {
+    if (!window.confirm('确认删除该策略模板吗？已绑定基金将回退为默认参数。')) {
       return;
     }
 
@@ -259,7 +259,7 @@ export default function AlertConfigPage() {
     setMessage('');
     try {
       await requestJson(`/api/alert/strategy-profiles/${id}`, { method: 'DELETE' });
-      setMessage('Strategy deleted');
+      setMessage('策略模板已删除');
       if (Number(strategyForm.id) === Number(id)) {
         resetStrategyForm();
       }
@@ -286,14 +286,14 @@ export default function AlertConfigPage() {
       };
 
       if (!payload.target_fund_code || !payload.target_fund_name || !payload.benchmark_fund_code || !payload.benchmark_fund_name) {
-        throw new Error('Fund code and fund name are required');
+        throw new Error('基金代码和基金名称不能为空');
       }
 
       if (bindingForm.params_override_json.trim()) {
         try {
           payload.params_override_json = JSON.parse(bindingForm.params_override_json);
         } catch (_parseError) {
-          throw new Error('params_override_json must be valid JSON');
+          throw new Error('覆盖参数必须是合法的 JSON');
         }
       } else {
         payload.params_override_json = {};
@@ -304,13 +304,13 @@ export default function AlertConfigPage() {
           method: 'PUT',
           body: JSON.stringify(payload)
         });
-        setMessage('Binding updated');
+        setMessage('基金绑定已更新');
       } else {
         await requestJson('/api/alert/fund-bindings', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
-        setMessage('Binding created');
+        setMessage('基金绑定已创建');
       }
 
       resetBindingForm();
@@ -323,7 +323,7 @@ export default function AlertConfigPage() {
   };
 
   const deleteBinding = async (code) => {
-    if (!window.confirm(`Delete fund binding ${code}?`)) {
+    if (!window.confirm(`确认删除基金绑定 ${code} 吗？`)) {
       return;
     }
 
@@ -331,7 +331,7 @@ export default function AlertConfigPage() {
     setMessage('');
     try {
       await requestJson(`/api/alert/fund-bindings/${code}`, { method: 'DELETE' });
-      setMessage('Binding deleted');
+      setMessage('基金绑定已删除');
       if (bindingForm.code === code) {
         resetBindingForm();
       }
@@ -347,27 +347,27 @@ export default function AlertConfigPage() {
       <section className={`card ${styles.headerCard}`}>
         <div className={styles.headerMain}>
           <div>
-            <h1 className={`${styles.pageTitle} alertPageTitle`}>Alert Config</h1>
+            <h1 className={`${styles.pageTitle} alertPageTitle`}>告警配置</h1>
             <p className={styles.pageIntro}>
-              Maintain strategy profiles, fund bindings, and per-fund overrides. Every save writes directly to PostgreSQL.
+              统一维护策略模板、基金绑定和单基金覆盖参数。每次保存都会直接写入 PostgreSQL。
             </p>
           </div>
 
           <dl className={styles.metricRail}>
             <div className={styles.metricItem}>
-              <dt>Strategies</dt>
+              <dt>策略模板</dt>
               <dd>{overview.strategyTotal}</dd>
             </div>
             <div className={styles.metricItem}>
-              <dt>Enabled</dt>
+              <dt>已启用</dt>
               <dd>{overview.strategyEnabled}</dd>
             </div>
             <div className={styles.metricItem}>
-              <dt>Bindings</dt>
+              <dt>基金绑定</dt>
               <dd>{overview.bindingTotal}</dd>
             </div>
             <div className={styles.metricItem}>
-              <dt>Overrides</dt>
+              <dt>覆盖参数</dt>
               <dd>{overview.bindingOverrides}</dd>
             </div>
           </dl>
@@ -375,10 +375,10 @@ export default function AlertConfigPage() {
 
         <div className={styles.headerActions}>
           <button className="button secondary" type="button" onClick={loadData} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh data'}
+            {loading ? '刷新中...' : '刷新数据'}
           </button>
           <Link className="button secondary" href="/">
-            Back to app
+            返回首页
           </Link>
         </div>
       </section>
@@ -390,21 +390,21 @@ export default function AlertConfigPage() {
         <section className={`card ${styles.sectionCard}`}>
           <div className={styles.sectionHead}>
             <div>
-              <h2 className={styles.sectionTitle}>{strategyForm.id ? 'Edit strategy profile' : 'New strategy profile'}</h2>
-              <p className={styles.sectionHint}>Keep reusable alert parameters in one place and bind them to funds when needed.</p>
+              <h2 className={styles.sectionTitle}>{strategyForm.id ? '编辑策略模板' : '新建策略模板'}</h2>
+              <p className={styles.sectionHint}>将可复用的告警参数集中维护，按需绑定到不同基金。</p>
             </div>
-            <div className={styles.sectionMeta}>Enabled {overview.strategyEnabled} / {overview.strategyTotal}</div>
+            <div className={styles.sectionMeta}>已启用 {overview.strategyEnabled} / {overview.strategyTotal}</div>
           </div>
 
           <form onSubmit={saveStrategy} className={styles.form}>
             <div className={styles.gridTwo}>
               <label className={styles.field}>
-                <span>Strategy name</span>
+                <span>策略名称</span>
                 <input
                   className="input"
                   value={strategyForm.name}
                   onChange={(event) => setStrategyForm((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder="default-v1 / conservative-v1"
+                  placeholder="如：默认版 / 保守版"
                 />
               </label>
               <label className={styles.checkboxField}>
@@ -413,32 +413,32 @@ export default function AlertConfigPage() {
                   checked={strategyForm.enabled}
                   onChange={(event) => setStrategyForm((prev) => ({ ...prev, enabled: event.target.checked }))}
                 />
-                Enable this strategy
+                启用该策略模板
               </label>
             </div>
 
             <div className={styles.gridThree}>
-              <label className={styles.field}><span>macd_fast</span><input className="input" value={strategyForm.macd_fast} onChange={(event) => setStrategyForm((prev) => ({ ...prev, macd_fast: event.target.value }))} /></label>
-              <label className={styles.field}><span>macd_slow</span><input className="input" value={strategyForm.macd_slow} onChange={(event) => setStrategyForm((prev) => ({ ...prev, macd_slow: event.target.value }))} /></label>
-              <label className={styles.field}><span>macd_signal</span><input className="input" value={strategyForm.macd_signal} onChange={(event) => setStrategyForm((prev) => ({ ...prev, macd_signal: event.target.value }))} /></label>
-              <label className={styles.field}><span>td_mode</span><input className="input" value={strategyForm.td_mode} onChange={(event) => setStrategyForm((prev) => ({ ...prev, td_mode: event.target.value }))} /></label>
-              <label className={styles.field}><span>pivot_left</span><input className="input" value={strategyForm.pivot_left} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pivot_left: event.target.value }))} /></label>
-              <label className={styles.field}><span>pivot_right_confirm</span><input className="input" value={strategyForm.pivot_right_confirm} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pivot_right_confirm: event.target.value }))} /></label>
-              <label className={styles.field}><span>pivot_right_preview</span><input className="input" value={strategyForm.pivot_right_preview} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pivot_right_preview: event.target.value }))} /></label>
-              <label className={styles.field}><span>min_sep_15m</span><input className="input" value={strategyForm.min_sep_15m} onChange={(event) => setStrategyForm((prev) => ({ ...prev, min_sep_15m: event.target.value }))} /></label>
-              <label className={styles.field}><span>min_sep_30m</span><input className="input" value={strategyForm.min_sep_30m} onChange={(event) => setStrategyForm((prev) => ({ ...prev, min_sep_30m: event.target.value }))} /></label>
-              <label className={styles.field}><span>min_sep_60m</span><input className="input" value={strategyForm.min_sep_60m} onChange={(event) => setStrategyForm((prev) => ({ ...prev, min_sep_60m: event.target.value }))} /></label>
-              <label className={styles.field}><span>eps_price</span><input className="input" value={strategyForm.eps_price} onChange={(event) => setStrategyForm((prev) => ({ ...prev, eps_price: event.target.value }))} /></label>
-              <label className={styles.field}><span>eps_diff_std_window</span><input className="input" value={strategyForm.eps_diff_std_window} onChange={(event) => setStrategyForm((prev) => ({ ...prev, eps_diff_std_window: event.target.value }))} /></label>
-              <label className={styles.field}><span>eps_diff_std_mul</span><input className="input" value={strategyForm.eps_diff_std_mul} onChange={(event) => setStrategyForm((prev) => ({ ...prev, eps_diff_std_mul: event.target.value }))} /></label>
-              <label className={styles.field}><span>pre_alert_time</span><input className="input" value={strategyForm.pre_alert_time} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pre_alert_time: event.target.value }))} placeholder="14:50" /></label>
-              <label className={styles.field}><span>exec_alert_time</span><input className="input" value={strategyForm.exec_alert_time} onChange={(event) => setStrategyForm((prev) => ({ ...prev, exec_alert_time: event.target.value }))} placeholder="14:58" /></label>
-              <label className={styles.field}><span>review_time</span><input className="input" value={strategyForm.review_time} onChange={(event) => setStrategyForm((prev) => ({ ...prev, review_time: event.target.value }))} placeholder="15:00" /></label>
+              <label className={styles.field}><span>MACD 快线周期（macd_fast）</span><input className="input" value={strategyForm.macd_fast} onChange={(event) => setStrategyForm((prev) => ({ ...prev, macd_fast: event.target.value }))} /></label>
+              <label className={styles.field}><span>MACD 慢线周期（macd_slow）</span><input className="input" value={strategyForm.macd_slow} onChange={(event) => setStrategyForm((prev) => ({ ...prev, macd_slow: event.target.value }))} /></label>
+              <label className={styles.field}><span>MACD 信号周期（macd_signal）</span><input className="input" value={strategyForm.macd_signal} onChange={(event) => setStrategyForm((prev) => ({ ...prev, macd_signal: event.target.value }))} /></label>
+              <label className={styles.field}><span>TD 模式（td_mode）</span><input className="input" value={strategyForm.td_mode} onChange={(event) => setStrategyForm((prev) => ({ ...prev, td_mode: event.target.value }))} /></label>
+              <label className={styles.field}><span>左侧枢轴窗口（pivot_left）</span><input className="input" value={strategyForm.pivot_left} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pivot_left: event.target.value }))} /></label>
+              <label className={styles.field}><span>确认右侧窗口（pivot_right_confirm）</span><input className="input" value={strategyForm.pivot_right_confirm} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pivot_right_confirm: event.target.value }))} /></label>
+              <label className={styles.field}><span>预览右侧窗口（pivot_right_preview）</span><input className="input" value={strategyForm.pivot_right_preview} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pivot_right_preview: event.target.value }))} /></label>
+              <label className={styles.field}><span>15 分钟最小间隔（min_sep_15m）</span><input className="input" value={strategyForm.min_sep_15m} onChange={(event) => setStrategyForm((prev) => ({ ...prev, min_sep_15m: event.target.value }))} /></label>
+              <label className={styles.field}><span>30 分钟最小间隔（min_sep_30m）</span><input className="input" value={strategyForm.min_sep_30m} onChange={(event) => setStrategyForm((prev) => ({ ...prev, min_sep_30m: event.target.value }))} /></label>
+              <label className={styles.field}><span>60 分钟最小间隔（min_sep_60m）</span><input className="input" value={strategyForm.min_sep_60m} onChange={(event) => setStrategyForm((prev) => ({ ...prev, min_sep_60m: event.target.value }))} /></label>
+              <label className={styles.field}><span>价格容差（eps_price）</span><input className="input" value={strategyForm.eps_price} onChange={(event) => setStrategyForm((prev) => ({ ...prev, eps_price: event.target.value }))} /></label>
+              <label className={styles.field}><span>波动窗口（eps_diff_std_window）</span><input className="input" value={strategyForm.eps_diff_std_window} onChange={(event) => setStrategyForm((prev) => ({ ...prev, eps_diff_std_window: event.target.value }))} /></label>
+              <label className={styles.field}><span>标准差倍数（eps_diff_std_mul）</span><input className="input" value={strategyForm.eps_diff_std_mul} onChange={(event) => setStrategyForm((prev) => ({ ...prev, eps_diff_std_mul: event.target.value }))} /></label>
+              <label className={styles.field}><span>预警时间（pre_alert_time）</span><input className="input" value={strategyForm.pre_alert_time} onChange={(event) => setStrategyForm((prev) => ({ ...prev, pre_alert_time: event.target.value }))} placeholder="14:50" /></label>
+              <label className={styles.field}><span>执行提醒时间（exec_alert_time）</span><input className="input" value={strategyForm.exec_alert_time} onChange={(event) => setStrategyForm((prev) => ({ ...prev, exec_alert_time: event.target.value }))} placeholder="14:58" /></label>
+              <label className={styles.field}><span>复核时间（review_time）</span><input className="input" value={strategyForm.review_time} onChange={(event) => setStrategyForm((prev) => ({ ...prev, review_time: event.target.value }))} placeholder="15:00" /></label>
             </div>
 
             <div className={styles.formActions}>
               <button className="button" type="submit" disabled={savingStrategy}>
-                {savingStrategy ? 'Saving...' : strategyForm.id ? 'Update strategy' : 'Create strategy'}
+                {savingStrategy ? '保存中...' : strategyForm.id ? '更新策略模板' : '创建策略模板'}
               </button>
               {strategyForm.id ? (
                 <button
@@ -447,7 +447,7 @@ export default function AlertConfigPage() {
                   onClick={resetStrategyForm}
                   disabled={savingStrategy}
                 >
-                  Cancel edit
+                  取消编辑
                 </button>
               ) : null}
             </div>
@@ -458,10 +458,10 @@ export default function AlertConfigPage() {
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Key times</th>
-                  <th>Actions</th>
+                  <th>名称</th>
+                  <th>状态</th>
+                  <th>关键时间</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -469,19 +469,19 @@ export default function AlertConfigPage() {
                   <tr key={item.id}>
                     <td className={styles.codeCell}>#{item.id}</td>
                     <td>{item.name}</td>
-                    <td>{item.enabled ? 'Enabled' : 'Disabled'}</td>
+                    <td>{item.enabled ? '启用' : '停用'}</td>
                     <td>
                       {item.params_json?.pre_alert_time || '--'} / {item.params_json?.exec_alert_time || '--'} / {item.params_json?.review_time || '--'}
                     </td>
                     <td className={styles.actionCell}>
-                      <button className="button secondary" type="button" onClick={() => setStrategyForm(strategyToForm(item))}>Edit</button>
-                      <button className="button secondary" type="button" onClick={() => deleteStrategy(item.id)}>Delete</button>
+                      <button className="button secondary" type="button" onClick={() => setStrategyForm(strategyToForm(item))}>编辑</button>
+                      <button className="button secondary" type="button" onClick={() => deleteStrategy(item.id)}>删除</button>
                     </td>
                   </tr>
                 ))}
                 {!strategies.length ? (
                   <tr>
-                    <td colSpan={5} className={styles.emptyCell}>No strategy profiles yet</td>
+                    <td colSpan={5} className={styles.emptyCell}>暂无策略模板</td>
                   </tr>
                 ) : null}
               </tbody>
@@ -492,16 +492,16 @@ export default function AlertConfigPage() {
         <section className={`card ${styles.sectionCard}`}>
           <div className={styles.sectionHead}>
             <div>
-              <h2 className={styles.sectionTitle}>{bindingForm.code ? 'Edit fund binding' : 'New fund binding'}</h2>
-              <p className={styles.sectionHint}>Connect a tradable fund, its benchmark driver, and the strategy profile used for alerts.</p>
+              <h2 className={styles.sectionTitle}>{bindingForm.code ? '编辑基金绑定' : '新建基金绑定'}</h2>
+              <p className={styles.sectionHint}>将可交易基金、基准驱动基金与告警策略模板关联起来。</p>
             </div>
-            <div className={styles.sectionMeta}>Enabled {overview.bindingEnabled} / {overview.bindingTotal}</div>
+            <div className={styles.sectionMeta}>已启用 {overview.bindingEnabled} / {overview.bindingTotal}</div>
           </div>
 
           <form onSubmit={saveBinding} className={styles.form}>
             <div className={styles.gridTwo}>
               <label className={styles.field}>
-                <span>Target fund code</span>
+                <span>目标基金代码</span>
                 <input
                   className="input"
                   value={bindingForm.target_fund_code}
@@ -510,16 +510,16 @@ export default function AlertConfigPage() {
                 />
               </label>
               <label className={styles.field}>
-                <span>Target fund name</span>
+                <span>目标基金名称</span>
                 <input
                   className="input"
                   value={bindingForm.target_fund_name}
                   onChange={(event) => setBindingForm((prev) => ({ ...prev, target_fund_name: event.target.value }))}
-                  placeholder="CSI Liquor Index"
+                  placeholder="中证白酒指数"
                 />
               </label>
               <label className={styles.field}>
-                <span>Benchmark code</span>
+                <span>基准基金代码</span>
                 <input
                   className="input"
                   value={bindingForm.benchmark_fund_code}
@@ -528,22 +528,22 @@ export default function AlertConfigPage() {
                 />
               </label>
               <label className={styles.field}>
-                <span>Benchmark name</span>
+                <span>基准基金名称</span>
                 <input
                   className="input"
                   value={bindingForm.benchmark_fund_name}
                   onChange={(event) => setBindingForm((prev) => ({ ...prev, benchmark_fund_name: event.target.value }))}
-                  placeholder="Liquor ETF"
+                  placeholder="酒 ETF"
                 />
               </label>
               <label className={styles.field}>
-                <span>Strategy profile</span>
+                <span>策略模板</span>
                 <select
                   className="select"
                   value={bindingForm.strategy_profile_id}
                   onChange={(event) => setBindingForm((prev) => ({ ...prev, strategy_profile_id: event.target.value }))}
                 >
-                  <option value="">No strategy profile (use defaults)</option>
+                  <option value="">不使用策略模板（采用默认参数）</option>
                   {strategyOptions.map((item) => (
                     <option key={item.id} value={item.id}>{item.label}</option>
                   ))}
@@ -555,12 +555,12 @@ export default function AlertConfigPage() {
                   checked={bindingForm.enabled}
                   onChange={(event) => setBindingForm((prev) => ({ ...prev, enabled: event.target.checked }))}
                 />
-                Enable this binding
+                启用该绑定
               </label>
             </div>
 
             <label className={styles.field}>
-              <span>Override params (optional JSON)</span>
+              <span>覆盖参数（可选 JSON）</span>
               <textarea
                 className={styles.textarea}
                 value={bindingForm.params_override_json}
@@ -571,7 +571,7 @@ export default function AlertConfigPage() {
 
             <div className={styles.formActions}>
               <button className="button" type="submit" disabled={savingBinding}>
-                {savingBinding ? 'Saving...' : bindingForm.code ? 'Update binding' : 'Create binding'}
+                {savingBinding ? '保存中...' : bindingForm.code ? '更新基金绑定' : '创建基金绑定'}
               </button>
               {bindingForm.code ? (
                 <button
@@ -580,7 +580,7 @@ export default function AlertConfigPage() {
                   onClick={resetBindingForm}
                   disabled={savingBinding}
                 >
-                  Cancel edit
+                  取消编辑
                 </button>
               ) : null}
             </div>
@@ -590,11 +590,11 @@ export default function AlertConfigPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Target fund</th>
-                  <th>Benchmark</th>
-                  <th>Strategy</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>目标基金</th>
+                  <th>基准基金</th>
+                  <th>策略模板</th>
+                  <th>状态</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -602,17 +602,17 @@ export default function AlertConfigPage() {
                   <tr key={item.target_fund_code}>
                     <td>{item.target_fund_name} ({item.target_fund_code})</td>
                     <td>{item.benchmark_fund_name} ({item.benchmark_fund_code})</td>
-                    <td>{item.strategy_profile_name || 'default-v1'}</td>
-                    <td>{item.enabled ? 'Enabled' : 'Disabled'}</td>
+                    <td>{item.strategy_profile_name || '默认参数'}</td>
+                    <td>{item.enabled ? '启用' : '停用'}</td>
                     <td className={styles.actionCell}>
-                      <button className="button secondary" type="button" onClick={() => setBindingForm(bindingToForm(item))}>Edit</button>
-                      <button className="button secondary" type="button" onClick={() => deleteBinding(item.target_fund_code)}>Delete</button>
+                      <button className="button secondary" type="button" onClick={() => setBindingForm(bindingToForm(item))}>编辑</button>
+                      <button className="button secondary" type="button" onClick={() => deleteBinding(item.target_fund_code)}>删除</button>
                     </td>
                   </tr>
                 ))}
                 {!bindings.length ? (
                   <tr>
-                    <td colSpan={5} className={styles.emptyCell}>No fund bindings yet</td>
+                    <td colSpan={5} className={styles.emptyCell}>暂无基金绑定</td>
                   </tr>
                 ) : null}
               </tbody>

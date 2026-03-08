@@ -37,7 +37,7 @@ export default function WeChatModal({ onClose }) {
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <Image
             src={weChatGroupImg}
-            alt="WeChat Group"
+            alt="微信用户交流群二维码"
             sizes="(max-width: 360px) 100vw, 360px"
             style={{ width: '100%', height: 'auto', borderRadius: '8px' }}
           />

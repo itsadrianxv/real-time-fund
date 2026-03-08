@@ -38,7 +38,7 @@ export default function LoginModal({
               style={{ width: '100%' }}
               className="input"
               type="email"
-              placeholder="your@email.com"
+              placeholder="请输入邮箱地址"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
               disabled={loginLoading || !!loginSuccess}

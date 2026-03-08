@@ -559,7 +559,7 @@ export default function HomePage() {
           setUpdateContent(data.body || '');
         }
       } catch (e) {
-        console.error('Check update failed:', e);
+        console.error('检查更新失败：', e);
       }
     };
 
@@ -1494,7 +1494,7 @@ export default function HomePage() {
       setScanConfirmModalOpen(true);
     } catch (err) {
       if (!abortScanRef.current) {
-        console.error('OCR Error:', err);
+        console.error('图片识别失败：', err);
         showToast('图片识别失败，请重试或更换更清晰的截图', 'error');
       }
     } finally {
@@ -3409,7 +3409,7 @@ export default function HomePage() {
       a.click();
       setTimeout(finish, 3000);
     } catch (err) {
-      console.error('Export error:', err);
+      console.error('导出失败：', err);
     }
   };
 
@@ -3548,7 +3548,7 @@ export default function HomePage() {
         if (importFileRef.current) importFileRef.current.value = '';
       }
     } catch (err) {
-      console.error('Import error:', err);
+      console.error('导入失败：', err);
       setImportMsg('导入失败，请检查文件格式');
       setTimeout(() => setImportMsg(''), 4000);
       if (importFileRef.current) importFileRef.current.value = '';
