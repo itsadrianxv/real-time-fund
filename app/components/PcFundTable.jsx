@@ -417,8 +417,7 @@ export default function PcFundTable({
     );
   };
 
-  const columns = useMemo(
-    () => [
+  const columns = [
       {
         accessorKey: 'fundName',
         header: '基金名称',
@@ -731,9 +730,7 @@ export default function PcFundTable({
           );
         },
       },
-    ],
-    [currentTab, favorites, refreshing, sortBy, showFullFundName],
-  );
+    ];
 
   const table = useReactTable({
     data,

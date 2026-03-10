@@ -17,7 +17,7 @@ export default function RefreshButton({ refreshCycleStartRef, refreshMs, manualR
       setRefreshProgress(p);
     }, 100);
     return () => clearInterval(t);
-  }, [fundsLength, refreshMs]);
+  }, [fundsLength, refreshMs, refreshCycleStartRef]);
 
   return (
     <div

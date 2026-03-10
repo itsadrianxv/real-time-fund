@@ -597,7 +597,7 @@ export default function HomePage() {
   }, [swipedFundCode]);
 
   // 检查交易日状态
-  const checkTradingDay = async () => {
+  const checkTradingDay = useCallback(async () => {
     const now = nowInTz();
     const isWeekend = now.day() === 0 || now.day() === 6;
 
@@ -630,14 +630,14 @@ export default function HomePage() {
     } catch (e) {
       setIsTradingDay(!isWeekend);
     }
-  };
+  }, [todayStr]);
 
   useEffect(() => {
     checkTradingDay();
     // 每30分钟检查一次
     const timer = setInterval(checkTradingDay, 60000 * 30);
     return () => clearInterval(timer);
-  }, []);
+  }, [checkTradingDay]);
 
   // 计算持仓收益
   const getHoldingProfit = useCallback((fund, holding) => {
@@ -927,7 +927,7 @@ export default function HomePage() {
           holdingProfitValue,
         };
       }),
-    [displayFunds, holdings, isTradingDay, todayStr, getHoldingProfit, dcaPlans],
+    [displayFunds, holdings, todayStr, getHoldingProfit, dcaPlans],
   );
 
   // 自动滚动选中 Tab 到可视区域
@@ -1649,6 +1649,12 @@ export default function HomePage() {
   const lastSyncedRef = useRef('');
   const skipSyncRef = useRef(false);
   const userIdRef = useRef(null);
+  const storageHelperRef = useRef(null);
+  const refreshAllRef = useRef(null);
+  const applyCloudConfigRef = useRef(null);
+  const fetchCloudConfigRef = useRef(null);
+  const syncUserConfigRef = useRef(null);
+  const getComparablePayloadRef = useRef(() => '');
   const dirtyKeysRef = useRef(new Set()); // 记录发生变化的字段
 
   useEffect(() => {
@@ -1710,12 +1716,12 @@ export default function HomePage() {
       // 计算 hash 比较是否真的变了（对于部分更新，这个比较可能意义不大，除非我们也部分比较）
       // 这里简化逻辑：如果是部分更新，直接发送
       if (dirtyKeys.size > 0) {
-        syncUserConfig(userIdRef.current, false, payload, true);
+        syncUserConfigRef.current?.(userIdRef.current, false, payload, true);
       } else {
-        const next = getComparablePayload(payload);
+        const next = getComparablePayloadRef.current?.(payload) || '';
         if (next === lastSyncedRef.current) return;
         lastSyncedRef.current = next;
-        syncUserConfig(userIdRef.current, false, payload, false);
+        syncUserConfigRef.current?.(userIdRef.current, false, payload, false);
       }
     }, 1000 * 5); // 往云端同步的防抖时间
   }, []);
@@ -1766,6 +1772,7 @@ export default function HomePage() {
       }
     };
   }, [getFundCodesSignature, scheduleSync]);
+  storageHelperRef.current = storageHelper;
 
   useEffect(() => {
     // 仅以下 key 的变更会触发云端同步；fundValuationTimeseries 不在其中
@@ -2148,9 +2155,9 @@ export default function HomePage() {
         if (Array.isArray(saved) && saved.length) {
           const deduped = dedupeByCode(saved);
           setFunds(deduped);
-          storageHelper.setItem('funds', JSON.stringify(deduped));
+          storageHelperRef.current?.setItem('funds', JSON.stringify(deduped));
           const codes = Array.from(new Set(deduped.map((f) => f.code)));
-          if (codes.length && shouldRefreshFromLocal) refreshAll(codes);
+          if (codes.length && shouldRefreshFromLocal) refreshAllRef.current?.(codes);
         }
       const savedMs = parseInt(localStorage.getItem('refreshMs') || '30000', 10);
       if (Number.isFinite(savedMs) && savedMs >= 5000) {
@@ -2223,7 +2230,7 @@ export default function HomePage() {
     };
     init();
     return () => { cancelled = true; };
-  }, [isSupabaseConfigured]);
+  }, []);
 
   // 记录用户当前选择的分组（仅本地存储，不同步云端）
   useEffect(() => {
@@ -2270,7 +2277,7 @@ export default function HomePage() {
           const storageKeys = Object.keys(localStorage);
           storageKeys.forEach((key) => {
             if (key === 'supabase.auth.token' || (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
-              storageHelper.removeItem(key);
+              storageHelperRef.current?.removeItem(key);
             }
           });
         } catch { }
@@ -2296,7 +2303,7 @@ export default function HomePage() {
         setLoginError('');
       }
       // 仅在明确的登录动作（SIGNED_IN）时检查冲突；INITIAL_SESSION（刷新页面等）不检查，直接以云端为准
-      fetchCloudConfig(session.user.id, isExplicitLogin);
+      fetchCloudConfigRef.current?.(session.user.id, isExplicitLogin);
     };
 
     supabase.auth.getSession().then(async ({ data, error }) => {
@@ -2327,16 +2334,16 @@ export default function HomePage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_configs', filter: `user_id=eq.${user.id}` }, async (payload) => {
         const incoming = payload?.new?.data;
         if (!isPlainObject(incoming)) return;
-        const incomingComparable = getComparablePayload(incoming);
+        const incomingComparable = getComparablePayloadRef.current?.(incoming);
         if (!incomingComparable || incomingComparable === lastSyncedRef.current) return;
-        await applyCloudConfig(incoming, payload.new.updated_at);
+        await applyCloudConfigRef.current?.(incoming, payload.new.updated_at);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_configs', filter: `user_id=eq.${user.id}` }, async (payload) => {
         const incoming = payload?.new?.data;
         if (!isPlainObject(incoming)) return;
-        const incomingComparable = getComparablePayload(incoming);
+        const incomingComparable = getComparablePayloadRef.current?.(incoming);
         if (!incomingComparable || incomingComparable === lastSyncedRef.current) return;
-        await applyCloudConfig(incoming, payload.new.updated_at);
+        await applyCloudConfigRef.current?.(incoming, payload.new.updated_at);
       })
       .subscribe();
     return () => {
@@ -2492,7 +2499,7 @@ export default function HomePage() {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       const codes = Array.from(new Set(funds.map((f) => f.code)));
-      if (codes.length) refreshAll(codes);
+      if (codes.length) refreshAllRef.current?.(codes);
     }, refreshMs);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -2679,6 +2686,8 @@ export default function HomePage() {
       }
     }
   };
+
+  refreshAllRef.current = refreshAll;
 
   const toggleViewMode = () => {
     const nextMode = viewMode === 'card' ? 'list' : 'card';
@@ -3144,6 +3153,8 @@ export default function HomePage() {
     }
   };
 
+  getComparablePayloadRef.current = getComparablePayload;
+
   const applyCloudConfig = async (cloudData, cloudUpdatedAt) => {
     if (!isPlainObject(cloudData)) return;
     skipSyncRef.current = true;
@@ -3234,6 +3245,8 @@ export default function HomePage() {
     }
   };
 
+  applyCloudConfigRef.current = applyCloudConfig;
+
   const fetchCloudConfig = async (userId, checkConflict = false) => {
     if (!userId) return;
     try {
@@ -3276,6 +3289,8 @@ export default function HomePage() {
       console.error('获取云端配置失败', e);
     }
   };
+
+  fetchCloudConfigRef.current = fetchCloudConfig;
 
   const syncUserConfig = async (userId, showTip = true, payload = null, isPartial = false) => {
     if (!userId) {
@@ -3352,6 +3367,8 @@ export default function HomePage() {
       setIsSyncing(false);
     }
   };
+
+  syncUserConfigRef.current = syncUserConfig;
 
   const handleSyncLocalConfig = async () => {
     const userId = cloudConfigModal.userId;

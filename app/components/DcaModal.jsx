@@ -40,6 +40,16 @@ const WEEKDAY_OPTIONS = [
   { value: 5, label: '周五' }
 ];
 
+const getDefaultWeeklyDay = () => {
+  const d = nowInTz().day();
+  return d >= 1 && d <= 5 ? d : 1;
+};
+
+const getDefaultMonthlyDay = () => {
+  const d = nowInTz().date();
+  return d >= 1 && d <= 28 ? d : 1;
+};
+
 const computeFirstDate = (cycle, weeklyDay, monthlyDay) => {
   const today = nowInTz().startOf('day');
 
@@ -82,21 +92,15 @@ export default function DcaModal({ fund, plan, onClose, onConfirm }) {
   const [feeRate, setFeeRate] = useState('0');
   const [cycle, setCycle] = useState('monthly');
   const [enabled, setEnabled] = useState(true);
-  const [weeklyDay, setWeeklyDay] = useState(() => {
-    const d = nowInTz().day();
-    return d >= 1 && d <= 5 ? d : 1;
-  });
-  const [monthlyDay, setMonthlyDay] = useState(() => {
-    const d = nowInTz().date();
-    return d >= 1 && d <= 28 ? d : 1;
-  });
+  const [weeklyDay, setWeeklyDay] = useState(getDefaultWeeklyDay);
+  const [monthlyDay, setMonthlyDay] = useState(getDefaultMonthlyDay);
   const [firstDate, setFirstDate] = useState(() => computeFirstDate('monthly', null, null));
   const monthlyDayRef = useRef(null);
 
   useEffect(() => {
     if (!plan) {
       // 新建定投时，以当前默认 weeklyDay/monthlyDay 计算一次首扣日期
-      setFirstDate(computeFirstDate('monthly', weeklyDay, monthlyDay));
+      setFirstDate(computeFirstDate('monthly', getDefaultWeeklyDay(), getDefaultMonthlyDay()));
       return;
     }
     if (plan.amount != null) {

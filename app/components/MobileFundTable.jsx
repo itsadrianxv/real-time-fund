@@ -45,6 +45,20 @@ const MOBILE_COLUMN_HEADERS = {
   holdingProfit: '持有收益',
 };
 
+const MOBILE_NAME_CELL_WIDTH = 140;
+const MOBILE_COLUMN_GAP = 12;
+const MOBILE_LAST_COLUMN_EXTRA = 12;
+const MOBILE_FALLBACK_WIDTHS = {
+  fundName: 140,
+  latestNav: 64,
+  estimateNav: 64,
+  yesterdayChangePercent: 72,
+  estimateChangePercent: 80,
+  totalChangePercent: 80,
+  todayProfit: 80,
+  holdingProfit: 80,
+};
+
 function SortableRow({ row, children, isTableDragging, disabled }) {
   const {
     attributes,
@@ -287,35 +301,21 @@ export default function MobileFundTable({
     return () => ro.disconnect();
   }, []);
 
-  const NAME_CELL_WIDTH = 140;
-  const GAP = 12;
-  const LAST_COLUMN_EXTRA = 12;
-  const FALLBACK_WIDTHS = {
-    fundName: 140,
-    latestNav: 64,
-    estimateNav: 64,
-    yesterdayChangePercent: 72,
-    estimateChangePercent: 80,
-    totalChangePercent: 80,
-    todayProfit: 80,
-    holdingProfit: 80,
-  };
-
   const columnWidthMap = useMemo(() => {
     const visibleNonNameIds = mobileColumnOrder.filter((id) => mobileColumnVisibility[id] !== false);
     const nonNameCount = visibleNonNameIds.length;
     if (tableContainerWidth > 0 && nonNameCount > 0) {
-      const gapTotal = nonNameCount >= 3 ? 3 * GAP : (nonNameCount) * GAP;
-      const remaining = tableContainerWidth - NAME_CELL_WIDTH - gapTotal - LAST_COLUMN_EXTRA;
+      const gapTotal = nonNameCount >= 3 ? 3 * MOBILE_COLUMN_GAP : (nonNameCount) * MOBILE_COLUMN_GAP;
+      const remaining = tableContainerWidth - MOBILE_NAME_CELL_WIDTH - gapTotal - MOBILE_LAST_COLUMN_EXTRA;
       const divisor = nonNameCount >= 3 ? 3 : nonNameCount;
       const otherColumnWidth = Math.max(48, Math.floor(remaining / divisor));
-      const map = { fundName: NAME_CELL_WIDTH };
+      const map = { fundName: MOBILE_NAME_CELL_WIDTH };
       MOBILE_NON_FROZEN_COLUMN_IDS.forEach((id) => {
         map[id] = otherColumnWidth;
       });
       return map;
     }
-    return { ...FALLBACK_WIDTHS };
+    return { ...MOBILE_FALLBACK_WIDTHS };
   }, [tableContainerWidth, mobileColumnOrder, mobileColumnVisibility]);
 
   const handleResetMobileColumnOrder = () => {
@@ -427,8 +427,7 @@ export default function MobileFundTable({
     );
   };
 
-  const columns = useMemo(
-    () => [
+  const columns = [
       {
         accessorKey: 'fundName',
         header: () => (
@@ -614,9 +613,7 @@ export default function MobileFundTable({
         },
         meta: { align: 'right', cellClassName: 'holding-cell', width: columnWidthMap.holdingProfit },
       },
-    ],
-    [currentTab, favorites, refreshing, columnWidthMap, showFullFundName]
-  );
+    ];
 
   const table = useReactTable({
     data,
@@ -655,13 +652,14 @@ export default function MobileFundTable({
   const scrollEndTimerRef = useRef(null);
 
   useEffect(() => {
-    if (!headerGroup?.headers?.length) {
+    const headerGroupHeaders = headerGroup?.headers ?? [];
+    if (!headerGroupHeaders.length) {
       snapPositionsRef.current = [];
       return;
     }
     const gap = 12;
-    const widths = headerGroup.headers.map((h) => h.column.columnDef.meta?.width ?? 80);
-    if (widths.length > 0) widths[widths.length - 1] += LAST_COLUMN_EXTRA;
+    const widths = headerGroupHeaders.map((h) => h.column.columnDef.meta?.width ?? 80);
+    if (widths.length > 0) widths[widths.length - 1] += MOBILE_LAST_COLUMN_EXTRA;
     const positions = [0];
     let acc = 0;
     // 从第二列开始累加，因为第一列是固定的，滚动是为了让后续列贴合到第一列右侧
@@ -671,7 +669,7 @@ export default function MobileFundTable({
       positions.push(acc);
     }
     snapPositionsRef.current = positions;
-  }, [headerGroup?.headers?.length, columnWidthMap, mobileColumnOrder]);
+  }, [headerGroup]);
 
   useEffect(() => {
     const el = tableContainerRef.current;
@@ -708,7 +706,7 @@ export default function MobileFundTable({
     if (!headerGroup?.headers?.length) return { gridTemplateColumns: '', minWidth: undefined };
     const gap = 12;
     const widths = headerGroup.headers.map((h) => h.column.columnDef.meta?.width ?? 80);
-    if (widths.length > 0) widths[widths.length - 1] += LAST_COLUMN_EXTRA;
+    if (widths.length > 0) widths[widths.length - 1] += MOBILE_LAST_COLUMN_EXTRA;
     return {
       gridTemplateColumns: widths.map((w) => `${w}px`).join(' '),
       minWidth: widths.reduce((a, b) => a + b, 0) + (widths.length - 1) * gap,
@@ -746,7 +744,7 @@ export default function MobileFundTable({
                 <div
                   key={header.id}
                   className={`table-header-cell ${alignClass} ${pinClass}`}
-                  style={isLastColumn ? { paddingRight: LAST_COLUMN_EXTRA } : undefined}
+                  style={isLastColumn ? { paddingRight: MOBILE_LAST_COLUMN_EXTRA } : undefined}
                 >
                   {header.isPlaceholder
                     ? null
@@ -799,7 +797,7 @@ export default function MobileFundTable({
                           <div
                             key={cell.id}
                             className={`table-cell ${alignClass} ${cellClassName} ${pinClass}`}
-                            style={isLastColumn ? { paddingRight: LAST_COLUMN_EXTRA } : undefined}
+                            style={isLastColumn ? { paddingRight: MOBILE_LAST_COLUMN_EXTRA } : undefined}
                           >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </div>
