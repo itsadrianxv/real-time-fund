@@ -37,6 +37,26 @@ const normalizeJsonObject = (value) => {
   return value;
 };
 
+const normalizeText = (value) => String(value || '').trim();
+
+const normalizeNullableNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const normalizeFundSubscriptionList = (funds) => {
+  const unique = new Map();
+
+  for (const item of Array.isArray(funds) ? funds : []) {
+    const code = normalizeText(item?.code || item?.fund_code);
+    if (!code) continue;
+    const fundName = normalizeText(item?.name || item?.fund_name) || code;
+    unique.set(code, { code, fundName });
+  }
+
+  return [...unique.values()];
+};
+
 export const ensureAlertSchema = async () => {
   if (!schemaReadyPromise) {
     schemaReadyPromise = (async () => {
@@ -135,6 +155,36 @@ export const ensureAlertSchema = async () => {
 
         CREATE INDEX IF NOT EXISTS idx_notify_log_event_id
           ON notify_log(event_id);
+
+        CREATE TABLE IF NOT EXISTS fund_valuation_subscription (
+          user_id UUID NOT NULL,
+          fund_code VARCHAR(32) NOT NULL,
+          fund_name TEXT NOT NULL,
+          active BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          PRIMARY KEY (user_id, fund_code)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_fund_valuation_subscription_active_code
+          ON fund_valuation_subscription(active, fund_code);
+
+        CREATE TABLE IF NOT EXISTS fund_valuation_sample_1m (
+          id BIGSERIAL PRIMARY KEY,
+          fund_code VARCHAR(32) NOT NULL,
+          trade_date DATE NOT NULL,
+          sample_minute TIMESTAMPTZ NOT NULL,
+          estimate_nav NUMERIC(18, 6) NOT NULL,
+          estimate_change_percent NUMERIC(18, 6) NULL,
+          latest_nav NUMERIC(18, 6) NULL,
+          nav_date DATE NULL,
+          estimate_time TEXT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          UNIQUE(fund_code, sample_minute)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_fund_valuation_sample_code_date_minute
+          ON fund_valuation_sample_1m(fund_code, trade_date, sample_minute ASC);
       `);
 
       await pool.query(
@@ -670,4 +720,202 @@ export const insertNotifyLog = async ({
   );
 
   return result.rows[0];
+};
+
+export const syncFundValuationSubscriptions = async ({ userId, funds = [] }) => {
+  await ensureAlertSchema();
+
+  const normalizedUserId = normalizeText(userId);
+  if (!normalizedUserId) {
+    throw new Error('userId is required');
+  }
+
+  const normalizedFunds = normalizeFundSubscriptionList(funds);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    for (const fund of normalizedFunds) {
+      await client.query(
+        `
+          INSERT INTO fund_valuation_subscription(
+            user_id,
+            fund_code,
+            fund_name,
+            active
+          )
+          VALUES ($1, $2, $3, TRUE)
+          ON CONFLICT (user_id, fund_code)
+          DO UPDATE SET
+            fund_name = EXCLUDED.fund_name,
+            active = TRUE,
+            updated_at = NOW()
+        `,
+        [normalizedUserId, fund.code, fund.fundName]
+      );
+    }
+
+    if (normalizedFunds.length > 0) {
+      await client.query(
+        `
+          UPDATE fund_valuation_subscription
+          SET active = FALSE, updated_at = NOW()
+          WHERE user_id = $1
+            AND active = TRUE
+            AND fund_code <> ALL($2::VARCHAR[])
+        `,
+        [normalizedUserId, normalizedFunds.map((fund) => fund.code)]
+      );
+    } else {
+      await client.query(
+        `
+          UPDATE fund_valuation_subscription
+          SET active = FALSE, updated_at = NOW()
+          WHERE user_id = $1
+            AND active = TRUE
+        `,
+        [normalizedUserId]
+      );
+    }
+
+    const countResult = await client.query(
+      `
+        SELECT COUNT(*)::INT AS active_count
+        FROM fund_valuation_subscription
+        WHERE user_id = $1
+          AND active = TRUE
+      `,
+      [normalizedUserId]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      activeCount: countResult.rows[0]?.active_count ?? 0
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+export const listActiveFundValuationTargets = async () => {
+  await ensureAlertSchema();
+
+  const result = await pool.query(
+    `
+      SELECT
+        fund_code,
+        MAX(fund_name) AS fund_name
+      FROM fund_valuation_subscription
+      WHERE active = TRUE
+      GROUP BY fund_code
+      ORDER BY fund_code ASC
+    `
+  );
+
+  return result.rows;
+};
+
+export const upsertFundValuationSample1m = async ({
+  fundCode,
+  tradeDate,
+  sampleMinute,
+  estimateNav,
+  estimateChangePercent,
+  latestNav,
+  navDate,
+  estimateTime
+}) => {
+  await ensureAlertSchema();
+
+  const result = await pool.query(
+    `
+      INSERT INTO fund_valuation_sample_1m(
+        fund_code,
+        trade_date,
+        sample_minute,
+        estimate_nav,
+        estimate_change_percent,
+        latest_nav,
+        nav_date,
+        estimate_time
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (fund_code, sample_minute)
+      DO UPDATE SET
+        trade_date = EXCLUDED.trade_date,
+        estimate_nav = EXCLUDED.estimate_nav,
+        estimate_change_percent = EXCLUDED.estimate_change_percent,
+        latest_nav = EXCLUDED.latest_nav,
+        nav_date = EXCLUDED.nav_date,
+        estimate_time = EXCLUDED.estimate_time
+      RETURNING
+        id,
+        fund_code,
+        trade_date,
+        sample_minute,
+        estimate_nav,
+        estimate_change_percent,
+        latest_nav,
+        nav_date,
+        estimate_time,
+        created_at
+    `,
+    [
+      normalizeText(fundCode),
+      tradeDate,
+      sampleMinute,
+      Number(estimateNav),
+      normalizeNullableNumber(estimateChangePercent),
+      normalizeNullableNumber(latestNav),
+      normalizeText(navDate) || null,
+      normalizeText(estimateTime) || null
+    ]
+  );
+
+  return result.rows[0];
+};
+
+export const getLatestFundValuationTradeDate = async (fundCode) => {
+  await ensureAlertSchema();
+
+  const result = await pool.query(
+    `
+      SELECT trade_date
+      FROM fund_valuation_sample_1m
+      WHERE fund_code = $1
+      ORDER BY trade_date DESC
+      LIMIT 1
+    `,
+    [normalizeText(fundCode)]
+  );
+
+  return result.rows[0]?.trade_date || null;
+};
+
+export const listFundValuationSamplesByDate = async ({ fundCode, tradeDate }) => {
+  await ensureAlertSchema();
+
+  const result = await pool.query(
+    `
+      SELECT
+        sample_minute,
+        estimate_nav,
+        estimate_change_percent,
+        latest_nav,
+        nav_date,
+        estimate_time
+      FROM fund_valuation_sample_1m
+      WHERE fund_code = $1
+        AND trade_date = $2
+      ORDER BY sample_minute ASC
+    `,
+    [normalizeText(fundCode), tradeDate]
+  );
+
+  return result.rows;
 };
