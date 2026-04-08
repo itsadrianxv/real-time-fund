@@ -1,0 +1,17 @@
+[Unit]
+Description=Fund valuation alert daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/real-time-fund
+ExecStart=/usr/bin/npm run daemon -- --config /opt/real-time-fund/config/fund-alert.json
+Restart=always
+RestartSec=5
+User=fundalert
+Group=fundalert
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

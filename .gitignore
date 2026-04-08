@@ -37,6 +37,12 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+.worktrees/
+var/
+config/fund-alert.json
+*.db
+*.db-shm
+*.db-wal
 
 # Git worktrees
 /.worktrees/

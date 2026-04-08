@@ -1,0 +1,24 @@
+{
+  "timezone": "Asia/Shanghai",
+  "sqlite_path": "./var/fund-alert.db",
+  "notification": {
+    "channel": "feishu",
+    "webhook_url": "https://open.feishu.cn/your-webhook"
+  },
+  "runtime": {
+    "sample_interval_seconds": 60,
+    "log_level": "info"
+  },
+  "market": {
+    "bar_timeframe": "60m",
+    "bar_closes": ["10:30", "11:30", "14:00", "15:00"]
+  },
+  "funds": [
+    {
+      "code": "161725",
+      "name": "招商中证白酒",
+      "enabled": true,
+      "shares": 1000
+    }
+  ]
+}
